@@ -1,0 +1,12 @@
+services:
+  transformador:
+    build: .
+    image: transformador-imagenes
+    container_name: transformador-imagenes
+    ports:
+      # fuera:dentro -> se abre en http://localhost:3002
+      - "3002:3000"
+    environment:
+      # solo para que el log muestre la direccion buena, no la de dentro
+      URL_PUBLICA: http://localhost:3002
+    restart: unless-stopped

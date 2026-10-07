@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transformador de imágenes</title>
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="icon" type="image/png" href="/icono-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  :root {
+    --fondo: #f6f5f3;
+    --panel: #ffffff;
+    --texto: #1c1a17;
+    --suave: #6b665f;
+    --borde: #dedbd5;
+    --acento: #b4501e;
+    --acento-suave: #fbeee6;
+    --ok: #2f7a4d;
+    --error: #a8331f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fondo: #171614;
+      --panel: #201e1b;
+      --texto: #ece8e1;
+      --suave: #9c958a;
+      --borde: #35322d;
+      --acento: #e07a45;
+      --acento-suave: #2c211a;
+      --ok: #6bbd8b;
+      --error: #e08b78;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2.5rem 1.25rem 4rem;
+    background: var(--fondo);
+    color: var(--texto);
+    font: 16px/1.55 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 780px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; margin: 0 0 .3rem; letter-spacing: -.015em; }
+  .lema { color: var(--suave); margin: 0 0 2rem; font-size: .95rem; }
+
+  #zona {
+    border: 2px dashed var(--borde);
+    border-radius: 12px;
+    background: var(--panel);
+    padding: 2.75rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  #zona:hover, #zona.encima { border-color: var(--acento); background: var(--acento-suave); }
+  #zona strong { display: block; font-size: 1.05rem; margin-bottom: .35rem; }
+  #zona span { color: var(--suave); font-size: .875rem; }
+  #entrada { display: none; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-top: 1.25rem;
+  }
+  .panel h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--suave); margin: 0 0 1rem; }
+
+  .fila { display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: flex-end; }
+  .campo { display: flex; flex-direction: column; gap: .35rem; }
+  .campo label { font-size: .8rem; color: var(--suave); }
+  input[type=number], select {
+    font: inherit; padding: .45rem .55rem; width: 7.5rem;
+    border: 1px solid var(--borde); border-radius: 7px;
+    background: var(--fondo); color: var(--texto);
+  }
+  input[type=range] { width: 11rem; accent-color: var(--acento); }
+  input[type=color] {
+    width: 3rem; height: 2.2rem; padding: 2px; cursor: pointer;
+    border: 1px solid var(--borde); border-radius: 7px; background: var(--fondo);
+  }
+
+  .segmentado { display: inline-flex; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; }
+  .segmentado button {
+    font: inherit; padding: .45rem 1.1rem; border: 0; cursor: pointer;
+    background: var(--fondo); color: var(--suave);
+  }
+  .segmentado button[aria-pressed=true] { background: var(--acento); color: #fff; }
+
+  #convertir {
+    font: inherit; font-weight: 600; margin-top: 1.25rem; width: 100%;
+    padding: .8rem; border: 0; border-radius: 9px; cursor: pointer;
+    background: var(--acento); color: #fff;
+  }
+  #convertir:disabled { opacity: .5; cursor: default; }
+
+  ul { list-style: none; margin: 0; padding: 0; }
+  li {
+    display: flex; gap: .75rem; align-items: center; justify-content: space-between;
+    padding: .6rem 0; border-bottom: 1px solid var(--borde);
+  }
+  li:last-child { border-bottom: 0; }
+  .nombre { font-size: .9rem; overflow-wrap: anywhere; }
+  .detalle { color: var(--suave); font-size: .8rem; }
+  .detalle.mal { color: var(--error); }
+  .menos { color: var(--ok); }
+  a.descargar {
+    font-size: .85rem; white-space: nowrap; text-decoration: none;
+    padding: .35rem .7rem; border: 1px solid var(--borde); border-radius: 7px; color: var(--texto);
+  }
+  a.descargar:hover { border-color: var(--acento); color: var(--acento); }
+  #zip { display: none; margin-top: 1rem; }
+  .quitar { border: 0; background: none; color: var(--suave); cursor: pointer; font-size: 1.1rem; line-height: 1; }
+  .aviso { margin-top: 2rem; font-size: .8rem; color: var(--suave); }
+  .oculto { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Transformador de imágenes</h1>
+  <p class="lema">Convierte JPEG, PNG, WEBP, AVIF, TIFF, GIF, SVG y HEIC a PNG o JPG. Todo se procesa en tu ordenador.</p>
+
+  <div id="zona" tabindex="0" role="button">
+    <strong>Arrastra tus imágenes aquí</strong>
+    <span>o haz clic para elegirlas &middot; hasta 60 archivos, 200 MB cada uno</span>
+  </div>
+  <input type="file" id="entrada" multiple accept="image/*,.heic,.heif,.avif,.tif,.tiff,.svg">
+
+  <section class="panel oculto" id="panelCola">
+    <h2>Archivos (<span id="contador">0</span>)</h2>
+    <ul id="cola"></ul>
+  </section>
+
+  <section class="panel">
+    <h2>Opciones</h2>
+    <div class="fila">
+      <div class="campo">
+        <label>Formato de salida</label>
+        <div class="segmentado" id="formato">
+          <button type="button" data-valor="png" aria-pressed="true">PNG</button>
+          <button type="button" data-valor="jpg" aria-pressed="false">JPG</button>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="calidad">Calidad &middot; <span id="valorCalidad">85</span></label>
+        <input type="range" id="calidad" min="1" max="100" value="85">
+      </div>
+      <div class="campo oculto" id="campoFondo">
+        <label for="fondo">Fondo (transparencias)</label>
+        <input type="color" id="fondo" value="#ffffff">
+      </div>
+    </div>
+    <div class="fila" style="margin-top:1.1rem">
+      <div class="campo">
+        <label for="ancho">Ancho máx. (px)</label>
+        <input type="number" id="ancho" min="1" placeholder="sin límite">
+      </div>
+      <div class="campo">
+        <label for="alto">Alto máx. (px)</label>
+        <input type="number" id="alto" min="1" placeholder="sin límite">
+      </div>
+    </div>
+    <button id="convertir" disabled>Convertir</button>
+  </section>
+
+  <section class="panel oculto" id="panelResultados">
+    <h2>Resultados</h2>
+    <ul id="resultados"></ul>
+    <a id="zip" class="descargar" href="#">Descargar todo en .zip</a>
+  </section>
+
+  <p class="aviso">Los RAW de cámara (CR2, NEF, ARW) no están soportados. Los archivos convertidos se borran del servidor a los 30 minutos.</p>
+</main>
+
+<script>
+const zona = document.getElementById('zona');
+const entrada = document.getElementById('entrada');
+const cola = document.getElementById('cola');
+const panelCola = document.getElementById('panelCola');
+const contador = document.getElementById('contador');
+const botonConvertir = document.getElementById('convertir');
+const panelResultados = document.getElementById('panelResultados');
+const listaResultados = document.getElementById('resultados');
+const enlaceZip = document.getElementById('zip');
+const campoFondo = document.getElementById('campoFondo');
+const calidad = document.getElementById('calidad');
+const valorCalidad = document.getElementById('valorCalidad');
+
+let archivos = [];
+let formato = 'png';
+
+function tamano(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+function pintarCola() {
+  cola.innerHTML = '';
+  archivos.forEach((f, i) => {
+    const li = document.createElement('li');
+    const info = document.createElement('div');
+    const nombre = document.createElement('div');
+    nombre.className = 'nombre';
+    nombre.textContent = f.name;
+    const detalle = document.createElement('div');
+    detalle.className = 'detalle';
+    detalle.textContent = tamano(f.size);
+    info.append(nombre, detalle);
+
+    const quitar = document.createElement('button');
+    quitar.className = 'quitar';
+    quitar.innerHTML = '&times;';
+    quitar.title = 'Quitar';
+    quitar.onclick = () => { archivos.splice(i, 1); pintarCola(); };
+
+    li.append(info, quitar);
+    cola.append(li);
+  });
+  contador.textContent = archivos.length;
+  panelCola.classList.toggle('oculto', archivos.length === 0);
+  botonConvertir.disabled = archivos.length === 0;
+}
+
+function anadir(lista) {
+  for (const f of lista) {
+    if (!archivos.some((a) => a.name === f.name && a.size === f.size)) archivos.push(f);
+  }
+  pintarCola();
+}
+
+zona.onclick = () => entrada.click();
+zona.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); entrada.click(); } };
+entrada.onchange = () => { anadir(entrada.files); entrada.value = ''; };
+
+['dragenter', 'dragover'].forEach((ev) => zona.addEventListener(ev, (e) => {
+  e.preventDefault(); zona.classList.add('encima');
+}));
+['dragleave', 'drop'].forEach((ev) => zona.addEventListener(ev, (e) => {
+  e.preventDefault(); zona.classList.remove('encima');
+}));
+zona.addEventListener('drop', (e) => anadir(e.dataTransfer.files));
+document.addEventListener('dragover', (e) => e.preventDefault());
+document.addEventListener('drop', (e) => e.preventDefault());
+
+document.getElementById('formato').onclick = (e) => {
+  const boton = e.target.closest('button');
+  if (!boton) return;
+  formato = boton.dataset.valor;
+  for (const b of e.currentTarget.children) b.setAttribute('aria-pressed', String(b === boton));
+  campoFondo.classList.toggle('oculto', formato !== 'jpg');
+};
+
+calidad.oninput = () => { valorCalidad.textContent = calidad.value; };
+
+botonConvertir.onclick = async () => {
+  botonConvertir.disabled = true;
+  botonConvertir.textContent = 'Convirtiendo...';
+  listaResultados.innerHTML = '';
+  enlaceZip.style.display = 'none';
+
+  const datos = new FormData();
+  for (const f of archivos) datos.append('imagenes', f);
+  datos.append('formato', formato);
+  datos.append('calidad', calidad.value);
+  datos.append('fondo', document.getElementById('fondo').value);
+  datos.append('ancho', document.getElementById('ancho').value || '0');
+  datos.append('alto', document.getElementById('alto').value || '0');
+
+  try {
+    const respuesta = await fetch('/api/convertir', { method: 'POST', body: datos });
+    const cuerpo = await respuesta.json();
+    if (!respuesta.ok) throw new Error(cuerpo.error || 'Error del servidor');
+    pintarResultados(cuerpo.items);
+  } catch (err) {
+    panelResultados.classList.remove('oculto');
+    const li = document.createElement('li');
+    li.innerHTML = '<div class="detalle mal"></div>';
+    li.firstChild.textContent = err.message;
+    listaResultados.append(li);
+  } finally {
+    botonConvertir.disabled = archivos.length === 0;
+    botonConvertir.textContent = 'Convertir';
+  }
+};
+
+function pintarResultados(items) {
+  panelResultados.classList.remove('oculto');
+  const ids = [];
+
+  for (const item of items) {
+    const li = document.createElement('li');
+    const info = document.createElement('div');
+    const nombre = document.createElement('div');
+    nombre.className = 'nombre';
+    nombre.textContent = item.nombre;
+    const detalle = document.createElement('div');
+    detalle.className = 'detalle';
+    info.append(nombre, detalle);
+    li.append(info);
+
+    if (item.ok) {
+      ids.push(item.id);
+      const diferencia = item.destino.bytes - item.origen.bytes;
+      const porcentaje = Math.round(Math.abs(diferencia) / item.origen.bytes * 100);
+      const salida = formato === 'jpg' ? 'JPG' : 'PNG';
+      detalle.innerHTML =
+        item.origen.formato.toUpperCase() + ' &rarr; ' + salida +
+        ' &middot; ' + item.destino.ancho + '&times;' + item.destino.alto +
+        ' &middot; ' + tamano(item.origen.bytes) + ' &rarr; ' + tamano(item.destino.bytes) +
+        (diferencia < 0
+          ? ' <span class="menos">(&minus;' + porcentaje + '%)</span>'
+          : ' (+' + porcentaje + '%)');
+
+      const enlace = document.createElement('a');
+      enlace.className = 'descargar';
+      enlace.href = item.url;
+      enlace.textContent = 'Descargar';
+      li.append(enlace);
+    } else {
+      detalle.className = 'detalle mal';
+      detalle.textContent = item.error;
+    }
+    listaResultados.append(li);
+  }
+
+  if (ids.length > 1) {
+    enlaceZip.href = '/api/zip?ids=' + ids.join(',');
+    enlaceZip.style.display = 'inline-block';
+  }
+}
+</script>
+</body>
+</html>

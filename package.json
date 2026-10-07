@@ -1,0 +1,19 @@
+{
+  "name": "transformador-imagenes",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Conversor local de imagenes a PNG o JPG",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "exifr": "^7.1.3",
+    "express": "^4.21.2",
+    "heic-decode": "^2.1.0",
+    "multer": "^2.2.0",
+    "png-to-ico": "^2.1.8",
+    "sharp": "^0.33.5"
+  }
+}
